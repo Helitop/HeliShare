@@ -8,44 +8,124 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="SettingsPage"
-    d:DataContext="{d:DesignInstance local:SettingsPage,
-                                     IsDesignTimeCreatable=False}"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DataContext="{d:DesignInstance local:SettingsPage, IsDesignTimeCreatable=False}"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    ScrollViewer.VerticalScrollBarVisibility="Auto">
+
     <Page.Resources>
         <helpers:EnumToBooleanConverter x:Key="EnumToBooleanConverter" />
     </Page.Resources>
 
-    <StackPanel>
-        <TextBlock
-            FontSize="20"
-            FontWeight="Medium"
-            Text="Personalization" />
-        <TextBlock Margin="0,12,0,0" Text="Theme" />
-        <RadioButton
-            Margin="0,12,0,0"
-            Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
-            CommandParameter="theme_light"
-            Content="Light"
-            GroupName="themeSelect"
-            IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Light, Mode=OneWay}" />
-        <RadioButton
-            Margin="0,8,0,0"
-            Command="{Binding ViewModel.ChangeThemeCommand, Mode=OneWay}"
-            CommandParameter="theme_dark"
-            Content="Dark"
-            GroupName="themeSelect"
-            IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Dark, Mode=OneWay}" />
+    <StackPanel Margin="20">
+        <!-- ТЕМА -->
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Персонализация" />
+        <ui:Card Margin="0,10,0,0">
+            <StackPanel>
+                <TextBlock Text="Тема приложения" FontWeight="Medium"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <RadioButton Content="Светлая" GroupName="theme" 
+                                 IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Light, Mode=OneWay}"
+                                 Command="{Binding ViewModel.ChangeThemeCommand}" CommandParameter="theme_light" Margin="0,0,15,0"/>
+                    <RadioButton Content="Темная" GroupName="theme"
+                                 IsChecked="{Binding ViewModel.CurrentTheme, Converter={StaticResource EnumToBooleanConverter}, ConverterParameter=Dark, Mode=OneWay}"
+                                 Command="{Binding ViewModel.ChangeThemeCommand}" CommandParameter="theme_dark"/>
+                </StackPanel>
+            </StackPanel>
+        </ui:Card>
 
-        <TextBlock
-            Margin="0,24,0,0"
-            FontSize="20"
-            FontWeight="Medium"
-            Text="About HeliShare" />
-        <TextBlock Margin="0,12,0,0" Text="{Binding ViewModel.AppVersion, Mode=OneWay}" />
+        <!-- ОБНОВЛЕНИЯ (НОВАЯ СЕКЦИЯ) -->
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Обновления" Margin="0,20,0,0" />
+        <ui:Card Margin="0,10,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Автоматически проверять обновления" FontWeight="Medium"/>
+                    <TextBlock Text="При запуске приложение будет искать новые версии на GitHub" 
+                               FontSize="12" Opacity="0.6" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <ui:ToggleSwitch Grid.Column="1" 
+                                 IsChecked="{Binding ViewModel.IsAutoUpdateEnabled, Mode=TwoWay}" 
+                                 VerticalAlignment="Center"/>
+
+                <ui:Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
+                           Content="Проверить сейчас" 
+                           Icon="{ui:SymbolIcon ArrowClockwise24}"
+                           Command="{Binding ViewModel.CheckUpdatesCommand}" 
+                           Margin="0,15,0,0" HorizontalAlignment="Left"/>
+            </Grid>
+        </ui:Card>
+
+        <!-- ФАЙЛЫ -->
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Файлы" Margin="0,20,0,0" />
+        <ui:Card Margin="0,10,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Папка сохранения файлов" FontWeight="Medium"/>
+
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ui:TextBox Text="{Binding ViewModel.CurrentSavePath}" IsReadOnly="True" VerticalAlignment="Center"/>
+                    <ui:Button Grid.Column="1" Content="Обзор..." Command="{Binding ViewModel.BrowseFolderCommand}" Margin="10,0,0,0"/>
+                </Grid>
+            </Grid>
+        </ui:Card>
+
+        <!-- СЕТЬ -->
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Сеть" Margin="0,20,0,0" />
+        <ui:Card Margin="0,10,0,0">
+            <StackPanel>
+                <TextBlock Text="Ограничение скорости" FontWeight="Medium" Margin="0,0,0,15"/>
+                <!-- Отправка -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Макс. скорость отправки (Upload)" Opacity="0.8"/>
+                        <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding ViewModel.UploadLimitValue, Mode=TwoWay}" Margin="0,5,10,0"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding ViewModel.UploadLimitText}" VerticalAlignment="Bottom" HorizontalAlignment="Right" TextWrapping="WrapWithOverflow"/>
+                </Grid>
+                <Separator Margin="0,15"/>
+                <!-- Прием -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Макс. скорость приема (Download)" Opacity="0.8"/>
+                        <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding ViewModel.DownloadLimitValue, Mode=TwoWay}" Margin="0,5,10,0"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding ViewModel.DownloadLimitText}" VerticalAlignment="Bottom" HorizontalAlignment="Right" TextWrapping="WrapWithOverflow"/>
+                </Grid>
+            </StackPanel>
+        </ui:Card>
+
+        <!-- О ПРОГРАММЕ -->
+        <TextBlock Margin="0,24,0,0" FontSize="18" FontWeight="SemiBold" Text="О программе" />
+        <TextBlock Margin="0,5,0,0" Text="{Binding ViewModel.AppVersion, Mode=OneWay}" Opacity="0.6" />
     </StackPanel>
 </Page>

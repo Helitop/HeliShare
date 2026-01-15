@@ -26,6 +26,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
         <ui:NavigationView
             x:Name="RootNavigation"
             Grid.Row="1"
@@ -33,10 +34,11 @@
             BreadcrumbBar="{Binding ElementName=BreadcrumbBar}"
             FooterMenuItemsSource="{Binding ViewModel.FooterMenuItems, Mode=OneWay}"
             FrameMargin="0"
-            IsBackButtonVisible="Visible"
+            IsBackButtonVisible="Collapsed"
             IsPaneToggleVisible="True"
             MenuItemsSource="{Binding ViewModel.MenuItems, Mode=OneWay}"
-            PaneDisplayMode="LeftFluent">
+            PaneDisplayMode="Left"
+            IsPaneOpen="False">
             <ui:NavigationView.Header>
                 <ui:BreadcrumbBar x:Name="BreadcrumbBar" Margin="42,32,42,20" />
             </ui:NavigationView.Header>
@@ -50,7 +52,8 @@
         <ContentPresenter
             x:Name="RootContentDialog"
             Grid.Row="0"
-            Grid.RowSpan="2" />
+            Grid.RowSpan="2" 
+            />
 
         <ui:TitleBar
             x:Name="TitleBar"
@@ -58,7 +61,7 @@
             Grid.Row="0"
             CloseWindowByDoubleClickOnIcon="True">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/wpfui-icon-256.png" />
+                <ui:ImageIcon Source="/Assets/wpfui-icon-256.png" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
     </Grid>

@@ -13,16 +13,10 @@ namespace HeliShare.ViewModels.Windows
         {
             new NavigationViewItem()
             {
-                Content = "Home",
+                Content = "Отправка файлов",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Home24 },
                 TargetPageType = typeof(Views.Pages.DashboardPage)
             },
-            new NavigationViewItem()
-            {
-                Content = "Data",
-                Icon = new SymbolIcon { Symbol = SymbolRegular.DataHistogram24 },
-                TargetPageType = typeof(Views.Pages.DataPage)
-            }
         };
 
         [ObservableProperty]
@@ -30,7 +24,7 @@ namespace HeliShare.ViewModels.Windows
         {
             new NavigationViewItem()
             {
-                Content = "Settings",
+                Content = "Параметры",
                 Icon = new SymbolIcon { Symbol = SymbolRegular.Settings24 },
                 TargetPageType = typeof(Views.Pages.SettingsPage)
             }

@@ -4,33 +4,322 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:HeliShare.Views.Pages"
+    xmlns:helpers="clr-namespace:HeliShare.Helpers"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="DashboardPage"
-    d:DataContext="{d:DesignInstance local:DashboardPage,
-                                     IsDesignTimeCreatable=False}"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DataContext="{d:DesignInstance local:DashboardPage, IsDesignTimeCreatable=False}"
+    d:DesignHeight="700" d:DesignWidth="800"
     ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
     ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    AllowDrop="True"
+    ScrollViewer.VerticalScrollBarVisibility="Disabled">
 
-    <Grid VerticalAlignment="Top">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
+    <Page.Resources>
+        <!-- Конвертеры -->
+        <helpers:NullToVisibilityConverter x:Key="NullToVis" Invert="False" />
+        <helpers:NullToVisibilityConverter x:Key="VisToNull" Invert="True" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-        <ui:Button
-            Grid.Column="0"
-            Command="{Binding ViewModel.CounterIncrementCommand, Mode=OneWay}"
-            Content="Click me!"
-            Icon="Fluent24" />
-        <TextBlock
-            Grid.Column="1"
-            Margin="12,0,0,0"
-            VerticalAlignment="Center"
-            Text="{Binding ViewModel.Counter, Mode=OneWay}" />
+        <!-- Единый стиль для элементов списков (Анимация + Визуал) -->
+        <Style x:Key="PeerItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform Y="20"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <!-- Bd — это контейнер выделения. Используем нейтральные кисти Wpf.Ui -->
+                        <Border x:Name="Bd" 
+                        Background="{TemplateBinding Background}" 
+                        CornerRadius="8" 
+                        Margin="2"
+                        BorderThickness="1"
+                        BorderBrush="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <!-- Состояние: Наведение мыши (Легкий нейтральный блик) -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+                            </Trigger>
+                            <!-- Состояние: Выбрано (Более заметный нейтральный фон + рамка) -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.4">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut"/>
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.4">
+                                <DoubleAnimation.EasingFunction>
+                                    <QuadraticEase EasingMode="EaseOut"/>
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ВЕРХНЯЯ СЕКЦИЯ -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Список пиров -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                
+                <ui:Button Click="UpdatePeers_Click" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                           Width="30" Height="40" Padding="0" Margin="0,2.5,0,0" Panel.ZIndex="1">
+                    <ui:SymbolIcon Symbol="ArrowClockwise48"/>
+                </ui:Button>
+
+                <ListBox ItemsSource="{Binding Peers}"
+                         SelectedItem="{Binding SelectedPeer, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource PeerItemStyle}"
+                         HorizontalContentAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         BorderThickness="0" Background="Transparent" Margin="0,0,30,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="PeerBorder" Padding="10" Margin="2" CornerRadius="8">
+                                <Border.Background>
+                                    <SolidColorBrush Color="{Binding DisplayColor}" Opacity="0.15"/>
+                                </Border.Background>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ui:Button Grid.Column="2" 
+           Click="OpenQrOnly_Click" 
+           Appearance="Transparent" 
+           BorderThickness="0" 
+           VerticalAlignment="Center" 
+           Padding="0" 
+           Margin="0,0,5,0"
+           Visibility="{Binding IsPhonePeer, Converter={StaticResource BoolToVis}}">
+                                        <ui:SymbolIcon Symbol="QrCode28" FontSize="20"/>
+                                        <ui:Button.ToolTip>
+                                            <ToolTip Content="Показать QR-код для подключения"/>
+                                        </ui:Button.ToolTip>
+                                    </ui:Button>
+                                    <!-- Кнопка More -->
+                                    <ui:Button Grid.Column="2" Click="PeerMore_Click" Appearance="Transparent" 
+                                               BorderThickness="0" VerticalAlignment="Bottom" Padding="0">
+                                        <ui:Button.Style>
+                                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelf}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPhonePeer}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:Button.Style>
+                                        <ui:SymbolIcon Symbol="MoreVertical48"/>
+                                        <ui:Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Забыть" Click="ForgetPeer_Click">
+                                                    <MenuItem.Icon><ui:SymbolIcon Symbol="Delete24"/></MenuItem.Icon>
+                                                </MenuItem>
+                                            </ContextMenu>
+                                        </ui:Button.ContextMenu>
+                                    </ui:Button>
+
+                                    <!-- Аватар -->
+                                    <Grid Grid.Column="0" Margin="0,0,12,0" Width="42" Height="42">
+                                        <Ellipse Fill="{Binding DisplayColor}"/>
+                                        <TextBlock Text="{Binding Nickname[0]}" Foreground="White" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                                   FontSize="20" FontWeight="Bold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                    <Setter Property="Visibility" Value="{Binding AvatarSource, Converter={StaticResource VisToNull}}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPhonePeer}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <ui:SymbolIcon Symbol="PhoneDesktop24">
+                                            <ui:SymbolIcon.Style>
+                                                <Style TargetType="ui:SymbolIcon">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPhonePeer}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ui:SymbolIcon.Style>
+                                        </ui:SymbolIcon>
+                                        <Ellipse Visibility="{Binding AvatarSource, Converter={StaticResource NullToVis}}">
+                                            <Ellipse.Fill><ImageBrush ImageSource="{Binding AvatarSource}" Stretch="UniformToFill"/></Ellipse.Fill>
+                                        </Ellipse>
+                                    </Grid>
+
+                                    <!-- Инфо -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Nickname}" FontWeight="SemiBold" FontSize="15"/>
+                                        <TextBlock Text="{Binding EndPoint.Address}" FontSize="12" Opacity="0.6">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPhonePeer}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <!-- Точка статуса -->
+                                    <Ellipse Grid.Column="2" Width="8" Height="8" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="5">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="Gray"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Online"><Setter Property="Fill" Value="#4CAF50"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSelf}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsPhonePeer}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Status}" Value="Offline"><Setter TargetName="PeerBorder" Property="Opacity" Value="0.5"/></DataTrigger>
+                                <DataTrigger Binding="{Binding IsPhonePeer}" Value="True"><Setter TargetName="PeerBorder" Property="Opacity" Value="1"/></DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <ui:Button Grid.Row="1" Content="Отправить" Appearance="Primary" Click="Send_Click" 
+                           IsEnabled="{Binding IsSendEnabled}" HorizontalAlignment="Stretch" Margin="0,5,0,0"/>
+            </Grid>
+
+            <!-- DropZone -->
+            <Border Grid.Column="1" BorderThickness="2" BorderBrush="Gray" CornerRadius="10" Margin="15,0,0,0"
+                    AllowDrop="True" Drop="DropZone_Drop" DragOver="DropZone_DragOver" Background="#10CCCCCC" Padding="10">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ui:TextBlock Text="Перетащите файл сюда" FontSize="16" HorizontalAlignment="Center"/>
+                    <ui:TextBlock Text="или" HorizontalAlignment="Center"/>
+                    <ui:Button Content="Выбрать файл..." Width="120" Margin="0,5,0,0" Click="BrowseFile_Click" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <RibbonSeparator Grid.Row="1" Opacity="0.1" Margin="0,15,0,15"/>
+
+        <!-- НИЖНЯЯ СЕКЦИЯ: ИСТОРИЯ -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,5">
+                <ui:TextBlock Text="История передач" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <ui:Button HorizontalAlignment="Right" Click="ClearHistory_Click">
+                    <ui:SymbolIcon Symbol="Delete32"/>
+                </ui:Button>
+            </Grid>
+
+            <ListBox Grid.Row="1" ItemsSource="{Binding ViewModel.VisibleTransfers}" 
+                     ItemContainerStyle="{StaticResource PeerItemStyle}"
+                     HorizontalContentAlignment="Stretch"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     Background="Transparent" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="10" Margin="2,4" CornerRadius="12">
+                            <Border.Background><SolidColorBrush Color="{Binding AccentColorHex}" Opacity="0.08"/></Border.Background>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Width="40" Height="40" Margin="0,0,15,0">
+                                    <Ellipse Fill="{Binding DisplayColor}" />
+                                    <TextBlock Text="{Binding Nickname[0]}" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                               FontSize="18" Visibility="{Binding AvatarSource, Converter={StaticResource VisToNull}}" />
+                                    <Ellipse Visibility="{Binding AvatarSource, Converter={StaticResource NullToVis}}">
+                                        <Ellipse.Fill><ImageBrush ImageSource="{Binding AvatarSource}" Stretch="UniformToFill" /></Ellipse.Fill>
+                                    </Ellipse>
+                                </Grid>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2">
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text=" • " FontSize="11" Opacity="0.5"/>
+                                        <TextBlock Text="{Binding SizeDisplay}" FontSize="11" Opacity="0.7"/>
+                                    </StackPanel>
+                                    <ProgressBar Value="{Binding Progress}" Height="4" Margin="0,6,6,0" 
+                                                 Foreground="{Binding AccentColorHex}" Background="#20808080"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right">
+                                    <ui:Button Appearance="Transparent" Padding="5" Margin="0,0,0,5" HorizontalAlignment="Right"
+                                               Click="OpenFileFolder_Click" Tag="{Binding}" ToolTip="Открыть папку с файлом">
+                                        <ui:SymbolIcon Symbol="Folder24"/>
+                                    </ui:Button>
+                                    <StackPanel Orientation="Horizontal" FlowDirection="RightToLeft">
+                                        <TextBlock Text="{Binding Date}" FontSize="10" Opacity="0.7" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding SpeedDisplay}" FontSize="11" Margin="5,0,0,0" Opacity="0.7" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <TextBlock Text="{Binding TimeRemainingDisplay}" Margin="5,0,0,0" FontSize="11" Opacity="0.7" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    <Border Margin="0,4,0,0" Padding="6,2" CornerRadius="4">
+                                        <Border.Background><SolidColorBrush Color="{Binding AccentColorHex}" Opacity="0.2"/></Border.Background>
+                                        <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="Medium" Foreground="{Binding AccentColorHex}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
     </Grid>
 </Page>
